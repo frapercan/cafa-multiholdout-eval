@@ -1,0 +1,7 @@
+filename	ns	tau	n	tp	fp	fn	pr	rc	cov	mi	ru	f	s	pr_micro	rc_micro	f_micro	cov_max
+multi_tower_5fold_avg_t5xxl_v3_22.tsv	biological_process	0.240	2628.000	6.009	12.636	9.583	0.336	0.354	0.957	12.636	9.583	0.344	15.859	0.322	0.385	0.351	1.062
+multi_tower_5fold_avg_t5xxl_v3_22.tsv	cellular_component	0.170	1639.000	2.773	5.185	2.886	0.309	0.409	1.010	5.185	2.886	0.352	5.934	0.348	0.490	0.407	1.092
+multi_tower_5fold_avg_t5xxl_v3_22.tsv	molecular_function	0.170	1350.000	1.309	2.740	1.153	0.477	0.598	0.931	2.740	1.153	0.531	2.973	0.323	0.532	0.402	1.122
+submission.tsv	biological_process	0.570	2530.000	6.052	65.406	9.540	0.190	0.383	0.921	65.406	9.540	0.254	66.098	0.085	0.388	0.139	1.076
+submission.tsv	cellular_component	0.490	1491.000	2.556	8.630	3.102	0.287	0.395	0.919	8.630	3.102	0.333	9.171	0.229	0.452	0.304	1.100
+submission.tsv	molecular_function	0.540	1055.000	0.888	7.078	1.574	0.146	0.278	0.728	7.078	1.574	0.191	7.251	0.112	0.361	0.170	1.098
