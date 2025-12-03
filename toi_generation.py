@@ -10,7 +10,7 @@ ROOT_TERMS = {
 
 terms = set()
 
-for fname in glob.glob("gt_all/gt_all.*.tsv"):
+for fname in glob.glob("clean-repo/gt_all/gt_all.*.tsv"):
     df = pd.read_csv(fname, sep="\t", dtype=str)
     if "go_term" not in df.columns:
         raise ValueError(f"Falta columna 'go_term' en {fname}")
