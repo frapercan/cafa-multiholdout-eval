@@ -21,7 +21,7 @@ If the package is already copied in the project root:
 
 ```bash
 pip install pandas
-pip install -e CAFA-evaluator-PK-main
+pip install -e CAFA-evaluator-PK
 ```
 or
 ```bash
