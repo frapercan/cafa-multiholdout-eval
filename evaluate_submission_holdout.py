@@ -113,6 +113,102 @@ def run_snapshot(
 
     subprocess.run(cmd, check=True)
 
+def run_custom_eval(
+    ontology_file: str,
+    submission_dir: str,
+    gt_file: str,
+    known_file: str,
+    toi_file: str | None,
+    out_root: str,
+    cafaeval_entry: str,
+    threads: int,
+    th_step: float,
+    ia_file: str | None,
+):
+    """
+    Run CAFA-evaluator once with explicit ground-truth and known files.
+
+    This does not use the N→N+1 delta naming scheme.
+    """
+    if not os.path.exists(gt_file):
+        print(f"[WARN] Ground truth file does not exist: {gt_file}", file=sys.stderr)
+        return
+
+    if not os.path.exists(known_file):
+        print(f"[WARN] Known file does not exist: {known_file}", file=sys.stderr)
+        return
+
+    # Derive output directory name from GT filename
+    out_name = os.path.basename(gt_file)
+    if out_name.startswith("ground_truth."):
+        out_name = out_name[len("ground_truth.") :]
+    if out_name.endswith(".tsv"):
+        out_name = out_name[:-4]
+
+    out_dir = os.path.join(out_root, out_name)
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Build base command (same logic as in run_snapshot)
+    if cafaeval_entry == "module":
+        cmd = [
+            sys.executable,
+            "-m",
+            "cafaeval",
+            ontology_file,
+            submission_dir,
+            gt_file,
+            "-known",
+            known_file,
+            "-out_dir",
+            out_dir,
+        ]
+    else:
+        cmd = [
+            sys.executable,
+            cafaeval_entry,
+            ontology_file,
+            submission_dir,
+            gt_file,
+            "-known",
+            known_file,
+            "-out_dir",
+            out_dir,
+        ]
+
+    # Default options
+    cmd.extend(
+        [
+            "-max_terms",
+            "500",
+            "-prop",
+            "fill",
+            "-norm",
+            "cafa",
+            "-no_orphans",
+            "-threads",
+            str(threads),
+            "-th_step",
+            str(th_step),
+        ]
+    )
+
+    # Optional TOI
+    if toi_file is not None:
+        cmd.extend(["-toi", toi_file])
+
+    # Optional IA
+    if ia_file is not None:
+        cmd.extend(["-ia", ia_file])
+
+    print("\n>>> Evaluating custom ground truth / known pair")
+    print("    GT        :", gt_file)
+    print("    KNOWN     :", known_file)
+    print("    PRED      :", submission_dir)
+    print("    OUT       :", out_dir)
+    print("    CMD       :", " ".join(cmd))
+
+    subprocess.run(cmd, check=True)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -159,15 +255,16 @@ def main():
     parser.add_argument(
         "--start",
         type=int,
-        required=True,
-        help="Primer snapshot N a evaluar.",
+        required=False,
+        help="Primer snapshot N a evaluar (ignored when --gt-file is used).",
     )
     parser.add_argument(
         "--end",
         type=int,
-        required=True,
-        help="Último snapshot N a evaluar.",
+        required=False,
+        help="Último snapshot N a evaluar (ignored when --gt-file is used).",
     )
+
     parser.add_argument(
         "--cafaeval-entry",
         default="module",
@@ -186,11 +283,29 @@ def main():
         help="Paso de umbral (-th_step). Subirlo acelera la evaluación.",
     )
 
+    parser.add_argument(
+        "--gt-file",
+        default=None,
+        help="Override a single ground truth file (TSV) and run one evaluation with it.",
+    )
+    parser.add_argument(
+        "--known-file",
+        default=None,
+        help="Override a single known file (TSV). Must be used together with --gt-file.",
+    )
+
+
     args = parser.parse_args()
 
-    if args.end < args.start:
-        print("ERROR: --end debe ser ≥ --start", file=sys.stderr)
-        sys.exit(1)
+    # Validate start/end only when NOT in custom override mode
+    if args.gt_file is None and args.known_file is None:
+        if args.start is None or args.end is None:
+            print("ERROR: --start and --end are required unless using --gt-file/--known-file", file=sys.stderr)
+            sys.exit(1)
+
+        if args.end < args.start:
+            print("ERROR: --end debe ser ≥ --start", file=sys.stderr)
+            sys.exit(1)
 
     if not os.path.exists(args.ontology):
         print(f"ERROR: Ontology file no existe: {args.ontology}", file=sys.stderr)
@@ -212,6 +327,34 @@ def main():
         sys.exit(1)
 
     os.makedirs(args.out_root, exist_ok=True)
+
+    # Optional single-file override mode (does not use N→N+1 deltas)
+    if args.gt_file is not None or args.known_file is not None:
+        if args.gt_file is None or args.known_file is None:
+            print(
+                "ERROR: You must provide both --gt-file and --known-file when overriding files.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        try:
+            run_custom_eval(
+                ontology_file=args.ontology,
+                submission_dir=args.submission_dir,
+                gt_file=args.gt_file,
+                known_file=args.known_file,
+                toi_file=args.toi,
+                out_root=args.out_root,
+                cafaeval_entry=args.cafaeval_entry,
+                threads=args.threads,
+                th_step=args.th_step,
+                ia_file=args.ia,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"[ERROR] CAFA-evaluator failed in custom mode: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        return
 
     print(
         f"Evaluando snapshots delta {args.start}→{args.start+1} ... {args.end}→{args.end+1}"
